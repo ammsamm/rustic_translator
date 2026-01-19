@@ -422,6 +422,14 @@ class TranslationEditor {
                 });
             }
 
+            // Debug: log first 3 translations being saved
+            console.log('Saving translations. First 3:', this.translations.slice(0, 3));
+            console.log('Modified translations:', modifiedTranslations.map(t => ({
+                id: t.id,
+                source: t.source_text.substring(0, 30),
+                translated: t.translated_text
+            })));
+
             const response = await frappe.call({
                 method: 'rustic_translator.api.translation.save_translations',
                 args: {
@@ -447,12 +455,23 @@ class TranslationEditor {
 
                 frappe.hide_progress();
                 frappe.show_alert({
-                    message: __('Translations saved successfully!'),
+                    message: __('Saved {0} rows (verified: {1}) to {2}', [
+                        response.message.rows_written,
+                        response.message.verification_count,
+                        response.message.file_path
+                    ]),
                     indicator: 'green'
                 });
 
                 await this.createSession();
                 this.renderGrid();
+            } else {
+                frappe.hide_progress();
+                frappe.msgprint({
+                    title: __('Save Failed'),
+                    indicator: 'red',
+                    message: JSON.stringify(response.message || response)
+                });
             }
         } catch (error) {
             frappe.hide_progress();

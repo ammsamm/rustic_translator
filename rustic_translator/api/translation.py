@@ -109,18 +109,28 @@ def save_translations(app_name, language_code, translations, site_name=None, ses
 
     file_path = get_translation_file_path(app_name, language_code)
 
+    # Verify file exists and is writable
     if not os.path.exists(file_path):
         frappe.throw(_("Translation file not found: {0}").format(file_path))
 
+    if not os.access(file_path, os.W_OK):
+        frappe.throw(_("No write permission for file: {0}").format(file_path))
+
     # Parse translations - handle both string and list
     if isinstance(translations, str):
-        translations = json_module.loads(translations)
-    elif isinstance(translations, dict):
-        # If it's a dict, it might be wrapped
+        try:
+            translations = json_module.loads(translations)
+        except json_module.JSONDecodeError as e:
+            frappe.throw(_("Invalid JSON format: {0}").format(str(e)))
+
+    if isinstance(translations, dict):
         translations = list(translations.values()) if translations else []
 
     if not isinstance(translations, list):
-        frappe.throw(_("Invalid translations format"))
+        frappe.throw(_("Invalid translations format. Expected list, got {0}").format(type(translations).__name__))
+
+    if len(translations) == 0:
+        frappe.throw(_("No translations to save"))
 
     # Get settings
     settings = frappe.get_single("Translation Manager Settings")
@@ -129,22 +139,48 @@ def save_translations(app_name, language_code, translations, site_name=None, ses
     if not site_name:
         site_name = settings.default_site or frappe.local.site
 
-    # Create backup
+    # Create backup first
     backup_path = create_backup(app_name, language_code, file_path, session_name)
 
     try:
         # Write new translations to CSV
+        rows_written = 0
         with open(file_path, "w", encoding="utf-8", newline="") as f:
             writer = csv.writer(f)
             for trans in translations:
-                source = trans.get("source_text", "") if isinstance(trans, dict) else ""
-                translated = trans.get("translated_text", "") if isinstance(trans, dict) else ""
-                context = trans.get("context", "") if isinstance(trans, dict) else ""
+                if not isinstance(trans, dict):
+                    continue
+
+                source = trans.get("source_text", "")
+                translated = trans.get("translated_text", "")
+                context = trans.get("context", "")
+
+                if not source:  # Skip empty source texts
+                    continue
 
                 row = [source, translated]
                 if context:
                     row.append(context)
                 writer.writerow(row)
+                rows_written += 1
+
+        # Verify file was written
+        if not os.path.exists(file_path):
+            frappe.throw(_("File write failed - file does not exist after write"))
+
+        file_size = os.path.getsize(file_path)
+        if file_size == 0:
+            # Restore from backup if file is empty
+            if backup_path and os.path.exists(backup_path):
+                shutil.copy2(backup_path, file_path)
+            frappe.throw(_("File write failed - file is empty after write"))
+
+        # Verify by reading back the file
+        verification_count = 0
+        with open(file_path, "r", encoding="utf-8") as f:
+            reader = csv.reader(f)
+            for row in reader:
+                verification_count += 1
 
         # Clear translation cache
         execute_bench_commands(site_name)
@@ -164,7 +200,10 @@ def save_translations(app_name, language_code, translations, site_name=None, ses
             "success": True,
             "message": _("Translations saved successfully"),
             "backup_path": backup_path,
-            "saved_count": len(translations)
+            "file_path": file_path,
+            "rows_written": rows_written,
+            "file_size": file_size,
+            "verification_count": verification_count
         }
 
     except Exception as e:
@@ -173,7 +212,7 @@ def save_translations(app_name, language_code, translations, site_name=None, ses
             shutil.copy2(backup_path, file_path)
 
         frappe.db.rollback()
-        frappe.log_error(f"Translation save failed: {str(e)}", "Translation Error")
+        frappe.log_error(frappe.get_traceback(), "Translation Save Error")
         frappe.throw(_("Failed to save translations: {0}").format(str(e)))
 
 
