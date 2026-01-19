@@ -427,7 +427,7 @@ class TranslationEditor {
                 args: {
                     app_name: appName,
                     language_code: langCode,
-                    translations: this.translations,
+                    translations: JSON.stringify(this.translations),
                     session_name: this.sessionName
                 }
             });
