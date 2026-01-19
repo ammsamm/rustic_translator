@@ -454,14 +454,12 @@ class TranslationEditor {
                 });
 
                 frappe.hide_progress();
+                const msg = response.message;
                 frappe.show_alert({
-                    message: __('Saved {0} rows (verified: {1}) to {2}', [
-                        response.message.rows_written,
-                        response.message.verification_count,
-                        response.message.file_path
-                    ]),
+                    message: `Saved ${msg.rows_written} rows (verified: ${msg.verification_count}) to ${msg.file_path}`,
                     indicator: 'green'
                 });
+                console.log('Save response:', msg);
 
                 await this.createSession();
                 this.renderGrid();
