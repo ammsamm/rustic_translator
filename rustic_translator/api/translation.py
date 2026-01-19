@@ -5,7 +5,6 @@ import frappe
 import csv
 import os
 import shutil
-import subprocess
 from frappe import _
 from frappe.utils import now_datetime, get_bench_path
 
@@ -215,33 +214,22 @@ def cleanup_old_backups(app_name, language_code, retention_count):
 
 
 def execute_bench_commands(site_name):
-    """Execute safe bench commands after saving translations"""
-    bench_path = get_bench_path()
+    """Clear translation cache after saving translations"""
+    try:
+        # Clear Frappe's translation cache
+        frappe.cache().delete_key("lang_full_dict")
+        frappe.cache().delete_key("lang_user_translations")
+        frappe.cache().delete_keys("lang_*")
 
-    commands = [
-        ["bench", "--site", site_name, "clear-cache"],
-        ["bench", "--site", site_name, "migrate"]
-    ]
+        # Clear general cache
+        frappe.clear_cache()
 
-    for cmd in commands:
-        try:
-            result = subprocess.run(
-                cmd,
-                cwd=bench_path,
-                capture_output=True,
-                text=True,
-                timeout=120  # 2 minute timeout
-            )
+        # Reload translations for current session
+        if hasattr(frappe.local, 'lang'):
+            frappe.local.lang_full_dict = None
 
-            if result.returncode != 0:
-                frappe.log_error(
-                    f"Command failed: {' '.join(cmd)}\nError: {result.stderr}",
-                    "Bench Command Error"
-                )
-        except subprocess.TimeoutExpired:
-            frappe.log_error(f"Command timed out: {' '.join(cmd)}", "Bench Command Timeout")
-        except Exception as e:
-            frappe.log_error(f"Command error: {str(e)}", "Bench Command Error")
+    except Exception as e:
+        frappe.log_error(f"Cache clear error: {str(e)}", "Translation Cache Error")
 
 
 @frappe.whitelist()
@@ -266,17 +254,7 @@ def restore_from_backup(backup_name):
     # Clear cache
     settings = frappe.get_single("Translation Manager Settings")
     site_name = settings.default_site or frappe.local.site
-
-    try:
-        bench_path = get_bench_path()
-        subprocess.run(
-            ["bench", "--site", site_name, "clear-cache"],
-            cwd=bench_path,
-            capture_output=True,
-            timeout=60
-        )
-    except Exception as e:
-        frappe.log_error(f"Clear cache failed after restore: {str(e)}")
+    execute_bench_commands(site_name)
 
     return {
         "success": True,
