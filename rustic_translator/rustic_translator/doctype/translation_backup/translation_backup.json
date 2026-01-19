@@ -1,0 +1,92 @@
+{
+    "actions": [],
+    "autoname": "format:TB-{####}",
+    "creation": "2024-01-01 00:00:00.000000",
+    "doctype": "DocType",
+    "engine": "InnoDB",
+    "field_order": [
+        "app_name",
+        "language_code",
+        "file_path",
+        "column_break_1",
+        "is_active",
+        "session",
+        "backup_timestamp"
+    ],
+    "fields": [
+        {
+            "fieldname": "app_name",
+            "fieldtype": "Data",
+            "label": "App Name",
+            "reqd": 1
+        },
+        {
+            "fieldname": "language_code",
+            "fieldtype": "Data",
+            "label": "Language Code",
+            "reqd": 1
+        },
+        {
+            "fieldname": "file_path",
+            "fieldtype": "Data",
+            "label": "File Path",
+            "reqd": 1
+        },
+        {
+            "fieldname": "column_break_1",
+            "fieldtype": "Column Break"
+        },
+        {
+            "default": "1",
+            "fieldname": "is_active",
+            "fieldtype": "Check",
+            "label": "Is Active"
+        },
+        {
+            "fieldname": "session",
+            "fieldtype": "Link",
+            "label": "Session",
+            "options": "Translation Edit Session"
+        },
+        {
+            "fieldname": "backup_timestamp",
+            "fieldtype": "Datetime",
+            "label": "Backup Timestamp"
+        }
+    ],
+    "index_web_pages_for_search": 1,
+    "links": [],
+    "modified": "2024-01-01 00:00:00.000000",
+    "modified_by": "Administrator",
+    "module": "Rustic Translator",
+    "name": "Translation Backup",
+    "naming_rule": "Expression",
+    "owner": "Administrator",
+    "permissions": [
+        {
+            "email": 1,
+            "export": 1,
+            "print": 1,
+            "read": 1,
+            "report": 1,
+            "role": "Translation Manager",
+            "share": 1
+        },
+        {
+            "create": 1,
+            "delete": 1,
+            "email": 1,
+            "export": 1,
+            "print": 1,
+            "read": 1,
+            "report": 1,
+            "role": "System Manager",
+            "share": 1,
+            "write": 1
+        }
+    ],
+    "sort_field": "modified",
+    "sort_order": "DESC",
+    "states": [],
+    "track_changes": 1
+}

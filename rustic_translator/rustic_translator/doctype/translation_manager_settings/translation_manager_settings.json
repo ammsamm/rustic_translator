@@ -1,0 +1,79 @@
+{
+    "actions": [],
+    "allow_rename": 0,
+    "creation": "2024-01-01 00:00:00.000000",
+    "doctype": "DocType",
+    "engine": "InnoDB",
+    "field_order": [
+        "default_site",
+        "backup_retention_count",
+        "column_break_1",
+        "last_edited_by",
+        "last_edited_on"
+    ],
+    "fields": [
+        {
+            "fieldname": "default_site",
+            "fieldtype": "Data",
+            "label": "Default Site",
+            "description": "The default site name for translation operations"
+        },
+        {
+            "default": "10",
+            "fieldname": "backup_retention_count",
+            "fieldtype": "Int",
+            "label": "Backup Retention Count",
+            "description": "Number of backup files to retain per translation file"
+        },
+        {
+            "fieldname": "column_break_1",
+            "fieldtype": "Column Break"
+        },
+        {
+            "fieldname": "last_edited_by",
+            "fieldtype": "Link",
+            "label": "Last Edited By",
+            "options": "User",
+            "read_only": 1
+        },
+        {
+            "fieldname": "last_edited_on",
+            "fieldtype": "Datetime",
+            "label": "Last Edited On",
+            "read_only": 1
+        }
+    ],
+    "issingle": 1,
+    "links": [],
+    "modified": "2024-01-01 00:00:00.000000",
+    "modified_by": "Administrator",
+    "module": "Rustic Translator",
+    "name": "Translation Manager Settings",
+    "owner": "Administrator",
+    "permissions": [
+        {
+            "create": 1,
+            "delete": 1,
+            "email": 1,
+            "print": 1,
+            "read": 1,
+            "role": "Translation Manager",
+            "share": 1,
+            "write": 1
+        },
+        {
+            "create": 1,
+            "delete": 1,
+            "email": 1,
+            "print": 1,
+            "read": 1,
+            "role": "System Manager",
+            "share": 1,
+            "write": 1
+        }
+    ],
+    "sort_field": "modified",
+    "sort_order": "DESC",
+    "states": [],
+    "track_changes": 1
+}

@@ -1,0 +1,99 @@
+{
+    "actions": [],
+    "autoname": "format:TES-{####}",
+    "creation": "2024-01-01 00:00:00.000000",
+    "doctype": "DocType",
+    "engine": "InnoDB",
+    "field_order": [
+        "session_name",
+        "app_name",
+        "language_code",
+        "column_break_1",
+        "site_name",
+        "status",
+        "modified_count"
+    ],
+    "fields": [
+        {
+            "fieldname": "session_name",
+            "fieldtype": "Data",
+            "label": "Session Name",
+            "read_only": 1
+        },
+        {
+            "fieldname": "app_name",
+            "fieldtype": "Select",
+            "label": "App Name",
+            "options": "frappe\nerpnext",
+            "reqd": 1
+        },
+        {
+            "fieldname": "language_code",
+            "fieldtype": "Select",
+            "label": "Language Code",
+            "options": "ar\nde\nes\nfr\nhi\nit\nja\nko\nnl\npt\nru\nzh",
+            "reqd": 1
+        },
+        {
+            "fieldname": "column_break_1",
+            "fieldtype": "Column Break"
+        },
+        {
+            "fieldname": "site_name",
+            "fieldtype": "Data",
+            "label": "Site Name"
+        },
+        {
+            "default": "Draft",
+            "fieldname": "status",
+            "fieldtype": "Select",
+            "label": "Status",
+            "options": "Draft\nIn Progress\nCompleted\nFailed"
+        },
+        {
+            "default": "0",
+            "fieldname": "modified_count",
+            "fieldtype": "Int",
+            "label": "Modified Count",
+            "read_only": 1
+        }
+    ],
+    "index_web_pages_for_search": 1,
+    "links": [],
+    "modified": "2024-01-01 00:00:00.000000",
+    "modified_by": "Administrator",
+    "module": "Rustic Translator",
+    "name": "Translation Edit Session",
+    "naming_rule": "Expression",
+    "owner": "Administrator",
+    "permissions": [
+        {
+            "create": 1,
+            "delete": 1,
+            "email": 1,
+            "export": 1,
+            "print": 1,
+            "read": 1,
+            "report": 1,
+            "role": "Translation Manager",
+            "share": 1,
+            "write": 1
+        },
+        {
+            "create": 1,
+            "delete": 1,
+            "email": 1,
+            "export": 1,
+            "print": 1,
+            "read": 1,
+            "report": 1,
+            "role": "System Manager",
+            "share": 1,
+            "write": 1
+        }
+    ],
+    "sort_field": "modified",
+    "sort_order": "DESC",
+    "states": [],
+    "track_changes": 1
+}

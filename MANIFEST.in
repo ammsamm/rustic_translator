@@ -1,0 +1,18 @@
+include MANIFEST.in
+include requirements.txt
+include *.json
+include *.md
+include *.py
+include *.txt
+recursive-include rustic_translator *.css
+recursive-include rustic_translator *.csv
+recursive-include rustic_translator *.html
+recursive-include rustic_translator *.ico
+recursive-include rustic_translator *.js
+recursive-include rustic_translator *.json
+recursive-include rustic_translator *.md
+recursive-include rustic_translator *.png
+recursive-include rustic_translator *.py
+recursive-include rustic_translator *.svg
+recursive-include rustic_translator *.txt
+recursive-exclude rustic_translator *.pyc
