@@ -100,9 +100,11 @@ def save_translations(app_name, language_code, translations, site_name=None, ses
     """
     Save translations to CSV file
     - Creates backup before saving
-    - Executes safe bench commands
+    - Clears translation cache
     - Handles rollback on failure
     """
+    import json as json_module
+
     check_translation_manager_permission()
 
     file_path = get_translation_file_path(app_name, language_code)
@@ -110,10 +112,15 @@ def save_translations(app_name, language_code, translations, site_name=None, ses
     if not os.path.exists(file_path):
         frappe.throw(_("Translation file not found: {0}").format(file_path))
 
-    # Parse translations if string
+    # Parse translations - handle both string and list
     if isinstance(translations, str):
-        import json
-        translations = json.loads(translations)
+        translations = json_module.loads(translations)
+    elif isinstance(translations, dict):
+        # If it's a dict, it might be wrapped
+        translations = list(translations.values()) if translations else []
+
+    if not isinstance(translations, list):
+        frappe.throw(_("Invalid translations format"))
 
     # Get settings
     settings = frappe.get_single("Translation Manager Settings")
@@ -130,12 +137,16 @@ def save_translations(app_name, language_code, translations, site_name=None, ses
         with open(file_path, "w", encoding="utf-8", newline="") as f:
             writer = csv.writer(f)
             for trans in translations:
-                row = [trans.get("source_text", ""), trans.get("translated_text", "")]
-                if trans.get("context"):
-                    row.append(trans.get("context"))
+                source = trans.get("source_text", "") if isinstance(trans, dict) else ""
+                translated = trans.get("translated_text", "") if isinstance(trans, dict) else ""
+                context = trans.get("context", "") if isinstance(trans, dict) else ""
+
+                row = [source, translated]
+                if context:
+                    row.append(context)
                 writer.writerow(row)
 
-        # Execute safe bench commands
+        # Clear translation cache
         execute_bench_commands(site_name)
 
         # Update settings
@@ -143,13 +154,17 @@ def save_translations(app_name, language_code, translations, site_name=None, ses
         settings.last_edited_on = now_datetime()
         settings.save(ignore_permissions=True)
 
+        # Commit database changes
+        frappe.db.commit()
+
         # Cleanup old backups
         cleanup_old_backups(app_name, language_code, backup_retention)
 
         return {
             "success": True,
             "message": _("Translations saved successfully"),
-            "backup_path": backup_path
+            "backup_path": backup_path,
+            "saved_count": len(translations)
         }
 
     except Exception as e:
@@ -157,6 +172,7 @@ def save_translations(app_name, language_code, translations, site_name=None, ses
         if backup_path and os.path.exists(backup_path):
             shutil.copy2(backup_path, file_path)
 
+        frappe.db.rollback()
         frappe.log_error(f"Translation save failed: {str(e)}", "Translation Error")
         frappe.throw(_("Failed to save translations: {0}").format(str(e)))
 
