@@ -454,12 +454,14 @@ class TranslationEditor {
                 });
 
                 frappe.hide_progress();
-                const msg = response.message;
+                console.log('Full response:', response);
+                console.log('response.message:', response.message);
+
+                const msg = response.message || {};
                 frappe.show_alert({
-                    message: `Saved ${msg.rows_written} rows (verified: ${msg.verification_count}) to ${msg.file_path}`,
+                    message: `Saved ${msg.rows_written || '?'} rows (verified: ${msg.verification_count || '?'}) to ${msg.file_path || 'unknown'}`,
                     indicator: 'green'
                 });
-                console.log('Save response:', msg);
 
                 await this.createSession();
                 this.renderGrid();
