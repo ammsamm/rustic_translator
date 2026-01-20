@@ -181,6 +181,12 @@ class TranslationEditor {
             });
 
             const data = response.message;
+            console.log('Load response - file_path:', data.file_path);
+            console.log('Load response - file_mtime:', data.file_mtime);
+            console.log('Load response - loaded_at:', data.loaded_at);
+            console.log('Load response - total_count:', data.total_count);
+            console.log('Load response - first 3:', data.debug_first_3);
+
             this.translations = data.translations || [];
 
             this.originalTranslations = {};

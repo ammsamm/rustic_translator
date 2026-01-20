@@ -71,6 +71,10 @@ def load_translations(app_name, language_code):
     if not os.path.exists(file_path):
         frappe.throw(_("Translation file not found: {0}").format(file_path))
 
+    # Get file modification time for debugging
+    file_mtime = os.path.getmtime(file_path)
+    file_mtime_str = now_datetime().strftime("%Y-%m-%d %H:%M:%S")
+
     translations = []
 
     with open(file_path, "r", encoding="utf-8") as f:
@@ -88,10 +92,21 @@ def load_translations(app_name, language_code):
                     "context": context
                 })
 
+    # Get first 3 translations for debugging
+    debug_first_3 = []
+    for t in translations[:3]:
+        debug_first_3.append({
+            "source": t["source_text"][:30],
+            "translated": t["translated_text"][:30] if t["translated_text"] else ""
+        })
+
     return {
         "translations": translations,
         "total_count": len(translations),
-        "file_path": file_path
+        "file_path": file_path,
+        "file_mtime": file_mtime,
+        "loaded_at": file_mtime_str,
+        "debug_first_3": debug_first_3
     }
 
 
