@@ -653,21 +653,32 @@ class TranslationEditor {
 
                     if (response.message && response.message.success) {
                         dialog.hide();
-                        frappe.show_alert({
-                            message: __('Translation added successfully!'),
-                            indicator: 'green'
+                        frappe.msgprint({
+                            title: __('Success'),
+                            indicator: 'green',
+                            message: __('Translation added successfully!') + '<br><br>' +
+                                '<strong>' + __('Source') + ':</strong> ' + values.source_text + '<br>' +
+                                '<strong>' + __('Translation') + ':</strong> ' + values.translated_text + '<br>' +
+                                '<strong>' + __('App') + ':</strong> ' + values.app_name
                         });
                         // Reload if we're on the same app
                         const currentApp = $(this.wrapper).find('#te-app-select').val();
                         if (currentApp === values.app_name) {
                             await this.loadTranslations();
                         }
+                    } else {
+                        frappe.msgprint({
+                            title: __('Error'),
+                            indicator: 'red',
+                            message: response.message ? response.message.message : __('Unknown error occurred')
+                        });
                     }
                 } catch (error) {
+                    console.error('Add translation error:', error);
                     frappe.msgprint({
                         title: __('Error'),
                         indicator: 'red',
-                        message: __('Failed to add translation: {0}', [error.message || error])
+                        message: __('Failed to add translation: {0}', [error.message || JSON.stringify(error)])
                     });
                 }
             }
