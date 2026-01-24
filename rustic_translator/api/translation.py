@@ -197,8 +197,8 @@ def save_translations(app_name, language_code, translations, site_name=None, ses
             for row in reader:
                 verification_count += 1
 
-        # Clear translation cache
-        execute_bench_commands(site_name)
+        # Import translations to database and clear cache
+        execute_bench_commands(site_name, app_name, language_code, file_path)
 
         # Update settings
         settings.last_edited_by = frappe.session.user
@@ -283,9 +283,65 @@ def cleanup_old_backups(app_name, language_code, retention_count):
             frappe.delete_doc("Translation Backup", backup.name, ignore_permissions=True)
 
 
-def execute_bench_commands(site_name):
-    """Clear translation cache after saving translations"""
+def import_translations_to_db(app_name, language_code, file_path):
+    """Import translations from CSV file into the database"""
     try:
+        from frappe.translate import read_csv_file
+
+        # Read translations from CSV
+        translations = read_csv_file(file_path)
+
+        # Delete existing translations for this app/language
+        frappe.db.delete("Translation", {
+            "language": language_code,
+            "source_text": ("in", [t[0] for t in translations if t])
+        })
+
+        # Insert new translations
+        for trans in translations:
+            if not trans or len(trans) < 2:
+                continue
+
+            source_text = trans[0]
+            translated_text = trans[1]
+            context = trans[2] if len(trans) > 2 else None
+
+            if not source_text or not translated_text:
+                continue
+
+            # Check if translation already exists
+            existing = frappe.db.exists("Translation", {
+                "language": language_code,
+                "source_text": source_text
+            })
+
+            if existing:
+                frappe.db.set_value("Translation", existing, "translated_text", translated_text)
+            else:
+                doc = frappe.get_doc({
+                    "doctype": "Translation",
+                    "language": language_code,
+                    "source_text": source_text,
+                    "translated_text": translated_text,
+                    "context": context
+                })
+                doc.insert(ignore_permissions=True)
+
+        frappe.db.commit()
+        return True
+
+    except Exception as e:
+        frappe.log_error(f"Translation import error: {str(e)}", "Translation Import Error")
+        return False
+
+
+def execute_bench_commands(site_name, app_name=None, language_code=None, file_path=None):
+    """Import translations to DB and clear cache after saving"""
+    try:
+        # Import translations into database
+        if app_name and language_code and file_path:
+            import_translations_to_db(app_name, language_code, file_path)
+
         # Clear Frappe's translation cache
         frappe.cache().delete_key("lang_full_dict")
         frappe.cache().delete_key("lang_user_translations")
@@ -321,10 +377,10 @@ def restore_from_backup(backup_name):
     # Restore from backup
     shutil.copy2(backup.file_path, target_path)
 
-    # Clear cache
+    # Import to database and clear cache
     settings = frappe.get_single("Translation Manager Settings")
     site_name = settings.default_site or frappe.local.site
-    execute_bench_commands(site_name)
+    execute_bench_commands(site_name, backup.app_name, backup.language_code, target_path)
 
     return {
         "success": True,
