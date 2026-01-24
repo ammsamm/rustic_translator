@@ -580,11 +580,10 @@ class TranslationEditor {
     }
 
     showAddTranslationDialog() {
-        const appName = $(this.wrapper).find('#te-app-select').val();
         const langCode = $(this.wrapper).find('#te-lang-select').val();
 
-        if (!appName || !langCode) {
-            frappe.msgprint(__('Please select an app and language first'));
+        if (!langCode) {
+            frappe.msgprint(__('Please select a language first'));
             return;
         }
 
@@ -597,6 +596,32 @@ class TranslationEditor {
                     label: __('Source Text (English)'),
                     reqd: 1,
                     description: __('The original English text to translate')
+                },
+                {
+                    fieldname: 'detect_app',
+                    fieldtype: 'Button',
+                    label: __('Detect App'),
+                    click: () => {
+                        const sourceText = dialog.get_value('source_text');
+                        if (!sourceText) {
+                            frappe.msgprint(__('Please enter source text first'));
+                            return;
+                        }
+                        this.detectAppForText(sourceText, dialog);
+                    }
+                },
+                {
+                    fieldname: 'app_name',
+                    fieldtype: 'Select',
+                    label: __('App'),
+                    options: 'frappe\nerpnext',
+                    reqd: 1,
+                    description: __('Click "Detect App" to auto-detect, or select manually')
+                },
+                {
+                    fieldname: 'detection_result',
+                    fieldtype: 'HTML',
+                    options: '<div id="detection-result"></div>'
                 },
                 {
                     fieldname: 'translated_text',
@@ -618,7 +643,7 @@ class TranslationEditor {
                     const response = await frappe.call({
                         method: 'rustic_translator.api.translation.add_translation',
                         args: {
-                            app_name: appName,
+                            app_name: values.app_name,
                             language_code: langCode,
                             source_text: values.source_text,
                             translated_text: values.translated_text,
@@ -632,7 +657,11 @@ class TranslationEditor {
                             message: __('Translation added successfully!'),
                             indicator: 'green'
                         });
-                        await this.loadTranslations();
+                        // Reload if we're on the same app
+                        const currentApp = $(this.wrapper).find('#te-app-select').val();
+                        if (currentApp === values.app_name) {
+                            await this.loadTranslations();
+                        }
                     }
                 } catch (error) {
                     frappe.msgprint({
@@ -645,5 +674,40 @@ class TranslationEditor {
         });
 
         dialog.show();
+    }
+
+    async detectAppForText(sourceText, dialog) {
+        try {
+            dialog.$wrapper.find('#detection-result').html(`<span class="text-muted">${__('Searching...')}</span>`);
+
+            const response = await frappe.call({
+                method: 'rustic_translator.api.translation.detect_app_for_text',
+                args: { source_text: sourceText }
+            });
+
+            const result = response.message;
+            let html = '';
+
+            if (result.found_in.length > 0) {
+                const appName = result.found_in[0]; // Use first match
+                dialog.set_value('app_name', appName);
+
+                html = `<div class="text-success" style="margin: 10px 0;">
+                    <strong>${__('Found in')}:</strong> ${result.found_in.join(', ')}<br>
+                    <small class="text-muted">${__('Files')}: ${result.files.slice(0, 3).join(', ')}${result.files.length > 3 ? '...' : ''}</small>
+                </div>`;
+            } else {
+                html = `<div class="text-warning" style="margin: 10px 0;">
+                    ${__('Text not found in source code. You can add it to either app.')}
+                </div>`;
+            }
+
+            dialog.$wrapper.find('#detection-result').html(html);
+
+        } catch (error) {
+            dialog.$wrapper.find('#detection-result').html(
+                `<span class="text-danger">${__('Detection failed')}</span>`
+            );
+        }
     }
 }

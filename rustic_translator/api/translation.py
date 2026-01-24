@@ -519,6 +519,62 @@ def complete_edit_session(session_name, modified_count=0):
 
 
 @frappe.whitelist()
+def detect_app_for_text(source_text):
+    """Detect which app(s) contain the given text in their source code"""
+    check_translation_manager_permission()
+
+    import subprocess
+
+    if not source_text:
+        return {"found_in": [], "files": []}
+
+    apps_path = get_apps_path()
+    found_in = []
+    files = []
+
+    # Search in frappe and erpnext
+    for app_name in ["frappe", "erpnext"]:
+        app_path = os.path.join(apps_path, app_name)
+        if not os.path.exists(app_path):
+            continue
+
+        try:
+            # Use grep to search for the text in JS, Python, and HTML files
+            # Escape special characters for grep
+            escaped_text = source_text.replace('"', '\\"').replace("'", "\\'")
+
+            result = subprocess.run(
+                [
+                    "grep", "-r", "-l", "--include=*.js", "--include=*.py",
+                    "--include=*.html", "--include=*.json",
+                    source_text, app_path
+                ],
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+
+            if result.returncode == 0 and result.stdout.strip():
+                found_in.append(app_name)
+                # Get first few matching files
+                matched_files = result.stdout.strip().split('\n')[:5]
+                # Clean up paths for display
+                for f in matched_files:
+                    relative_path = f.replace(apps_path + "/", "")
+                    files.append(relative_path)
+
+        except subprocess.TimeoutExpired:
+            pass
+        except Exception as e:
+            frappe.log_error(f"Detection error for {app_name}: {str(e)}", "Translation Detection Error")
+
+    return {
+        "found_in": found_in,
+        "files": files
+    }
+
+
+@frappe.whitelist()
 def add_translation(app_name, language_code, source_text, translated_text, context=None):
     """Add a new translation to the CSV file and database"""
     check_translation_manager_permission()
