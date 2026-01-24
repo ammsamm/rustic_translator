@@ -28,13 +28,16 @@ def get_translation_file_path(app_name, language_code):
 
 @frappe.whitelist()
 def get_available_apps():
-    """Get list of installed apps that have translations directory"""
+    """Get list of apps that have translations directory (only frappe and erpnext)"""
     check_translation_manager_permission()
+
+    # Only allow translating frappe and erpnext core apps
+    allowed_apps = ["frappe", "erpnext"]
 
     apps_path = get_apps_path()
     available_apps = []
 
-    for app_name in os.listdir(apps_path):
+    for app_name in allowed_apps:
         app_path = os.path.join(apps_path, app_name)
         translations_path = os.path.join(app_path, app_name, "translations")
 
