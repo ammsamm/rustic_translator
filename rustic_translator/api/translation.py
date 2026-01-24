@@ -516,3 +516,77 @@ def complete_edit_session(session_name, modified_count=0):
     session.save()
 
     return {"success": True}
+
+
+@frappe.whitelist()
+def add_translation(app_name, language_code, source_text, translated_text, context=None):
+    """Add a new translation to the CSV file and database"""
+    check_translation_manager_permission()
+
+    if not source_text or not translated_text:
+        frappe.throw(_("Source text and translation are required"))
+
+    file_path = get_translation_file_path(app_name, language_code)
+
+    if not os.path.exists(file_path):
+        frappe.throw(_("Translation file not found: {0}").format(file_path))
+
+    # Check if translation already exists in CSV
+    existing_translations = []
+    source_exists = False
+
+    with open(file_path, "r", encoding="utf-8") as f:
+        reader = csv.reader(f)
+        for row in reader:
+            if len(row) >= 2:
+                existing_translations.append(row)
+                if row[0].strip() == source_text.strip():
+                    source_exists = True
+
+    if source_exists:
+        frappe.throw(_("Translation for '{0}' already exists. Please edit it instead.").format(source_text))
+
+    # Create backup before modifying
+    create_backup(app_name, language_code, file_path)
+
+    # Append new translation to CSV
+    with open(file_path, "a", encoding="utf-8", newline="") as f:
+        writer = csv.writer(f)
+        row = [source_text, translated_text]
+        if context:
+            row.append(context)
+        writer.writerow(row)
+
+    # Add to database
+    existing_db = frappe.db.get_value("Translation", {
+        "language": language_code,
+        "source_text": source_text
+    }, "name")
+
+    if existing_db:
+        frappe.db.set_value("Translation", existing_db, "translated_text", translated_text)
+    else:
+        frappe.db.sql("""
+            INSERT INTO `tabTranslation` (name, language, source_text, translated_text, context, creation, modified, owner, modified_by)
+            VALUES (%s, %s, %s, %s, %s, NOW(), NOW(), %s, %s)
+        """, (
+            frappe.generate_hash(length=10),
+            language_code,
+            source_text,
+            translated_text,
+            context,
+            frappe.session.user,
+            frappe.session.user
+        ))
+
+    frappe.db.commit()
+
+    # Clear caches
+    settings = frappe.get_single("Translation Manager Settings")
+    site_name = settings.default_site or frappe.local.site
+    execute_bench_commands(site_name, app_name, language_code, file_path)
+
+    return {
+        "success": True,
+        "message": _("Translation added successfully")
+    }

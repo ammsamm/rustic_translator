@@ -33,6 +33,7 @@ class TranslationEditor {
         this.page.set_primary_action(__('Save Changes'), () => this.saveTranslations(), 'octicon octicon-check');
         this.page.set_secondary_action(__('Reload'), () => this.loadTranslations(), 'octicon octicon-sync');
 
+        this.page.add_menu_item(__('Add New Translation'), () => this.showAddTranslationDialog());
         this.page.add_menu_item(__('Discard Changes'), () => this.discardChanges());
         this.page.add_menu_item(__('View Backups'), () => this.showBackups());
     }
@@ -576,5 +577,73 @@ class TranslationEditor {
                 message: __('Failed to restore backup')
             });
         }
+    }
+
+    showAddTranslationDialog() {
+        const appName = $(this.wrapper).find('#te-app-select').val();
+        const langCode = $(this.wrapper).find('#te-lang-select').val();
+
+        if (!appName || !langCode) {
+            frappe.msgprint(__('Please select an app and language first'));
+            return;
+        }
+
+        const dialog = new frappe.ui.Dialog({
+            title: __('Add New Translation'),
+            fields: [
+                {
+                    fieldname: 'source_text',
+                    fieldtype: 'Small Text',
+                    label: __('Source Text (English)'),
+                    reqd: 1,
+                    description: __('The original English text to translate')
+                },
+                {
+                    fieldname: 'translated_text',
+                    fieldtype: 'Small Text',
+                    label: __('Translation'),
+                    reqd: 1,
+                    description: __('The translated text')
+                },
+                {
+                    fieldname: 'context',
+                    fieldtype: 'Data',
+                    label: __('Context (Optional)'),
+                    description: __('Optional context for the translation')
+                }
+            ],
+            primary_action_label: __('Add'),
+            primary_action: async (values) => {
+                try {
+                    const response = await frappe.call({
+                        method: 'rustic_translator.api.translation.add_translation',
+                        args: {
+                            app_name: appName,
+                            language_code: langCode,
+                            source_text: values.source_text,
+                            translated_text: values.translated_text,
+                            context: values.context || ''
+                        }
+                    });
+
+                    if (response.message && response.message.success) {
+                        dialog.hide();
+                        frappe.show_alert({
+                            message: __('Translation added successfully!'),
+                            indicator: 'green'
+                        });
+                        await this.loadTranslations();
+                    }
+                } catch (error) {
+                    frappe.msgprint({
+                        title: __('Error'),
+                        indicator: 'red',
+                        message: __('Failed to add translation: {0}', [error.message || error])
+                    });
+                }
+            }
+        });
+
+        dialog.show();
     }
 }
