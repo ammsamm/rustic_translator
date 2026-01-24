@@ -675,16 +675,94 @@ class TranslationEditor {
                     }
                 } catch (error) {
                     console.error('Add translation error:', error);
-                    frappe.msgprint({
-                        title: __('Error'),
-                        indicator: 'red',
-                        message: __('Failed to add translation: {0}', [error.message || JSON.stringify(error)])
-                    });
+
+                    // Parse server error message
+                    let errorMsg = __('Unknown error');
+                    if (error._server_messages) {
+                        try {
+                            const serverMsg = JSON.parse(error._server_messages);
+                            if (serverMsg[0]) {
+                                const msgObj = JSON.parse(serverMsg[0]);
+                                errorMsg = msgObj.message;
+                            }
+                        } catch(e) {
+                            errorMsg = error.message || error._server_messages;
+                        }
+                    } else if (error.message) {
+                        errorMsg = error.message;
+                    } else if (error.exc_type === 'ValidationError') {
+                        errorMsg = error.exception.replace('frappe.exceptions.ValidationError: ', '');
+                    }
+
+                    // Check if it's "already exists" error - offer to update
+                    if (errorMsg.includes('already exists')) {
+                        frappe.confirm(
+                            errorMsg + '<br><br>' + __('Do you want to update the existing translation instead?'),
+                            () => {
+                                // User wants to update - call update API
+                                this.updateExistingTranslation(
+                                    values.app_name,
+                                    langCode,
+                                    values.source_text,
+                                    values.translated_text,
+                                    values.context,
+                                    dialog
+                                );
+                            },
+                            () => {
+                                // User cancelled
+                            }
+                        );
+                    } else {
+                        frappe.msgprint({
+                            title: __('Error'),
+                            indicator: 'red',
+                            message: errorMsg
+                        });
+                    }
                 }
             }
         });
 
         dialog.show();
+    }
+
+    async updateExistingTranslation(appName, langCode, sourceText, translatedText, context, dialog) {
+        try {
+            const response = await frappe.call({
+                method: 'rustic_translator.api.translation.update_translation',
+                args: {
+                    app_name: appName,
+                    language_code: langCode,
+                    source_text: sourceText,
+                    translated_text: translatedText,
+                    context: context || ''
+                }
+            });
+
+            if (response.message && response.message.success) {
+                dialog.hide();
+                frappe.msgprint({
+                    title: __('Success'),
+                    indicator: 'green',
+                    message: __('Translation updated successfully!') + '<br><br>' +
+                        '<strong>' + __('Source') + ':</strong> ' + sourceText + '<br>' +
+                        '<strong>' + __('Translation') + ':</strong> ' + translatedText + '<br>' +
+                        '<strong>' + __('App') + ':</strong> ' + appName
+                });
+                // Reload if we're on the same app
+                const currentApp = $(this.wrapper).find('#te-app-select').val();
+                if (currentApp === appName) {
+                    await this.loadTranslations();
+                }
+            }
+        } catch (error) {
+            frappe.msgprint({
+                title: __('Error'),
+                indicator: 'red',
+                message: __('Failed to update translation')
+            });
+        }
     }
 
     async detectAppForText(sourceText, dialog) {
