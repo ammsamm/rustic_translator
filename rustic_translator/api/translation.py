@@ -348,10 +348,18 @@ def execute_bench_commands(site_name, app_name=None, language_code=None, file_pa
         if app_name and language_code and file_path:
             import_translations_to_db(app_name, language_code, file_path)
 
+        # Clear compiled locale files (.mo files) for this language
+        if language_code:
+            clear_locale_cache(language_code)
+
         # Clear Frappe's translation cache
         frappe.cache().delete_key("lang_full_dict")
         frappe.cache().delete_key("lang_user_translations")
         frappe.cache().delete_keys("lang_*")
+
+        # Clear all translation-related cache keys
+        frappe.cache().delete_keys("translation_*")
+        frappe.cache().delete_keys("*_translations")
 
         # Clear general cache
         frappe.clear_cache()
@@ -360,8 +368,44 @@ def execute_bench_commands(site_name, app_name=None, language_code=None, file_pa
         if hasattr(frappe.local, 'lang'):
             frappe.local.lang_full_dict = None
 
+        # Clear local translation dict
+        if hasattr(frappe.local, 'lang_full_dict'):
+            frappe.local.lang_full_dict = None
+
     except Exception as e:
         frappe.log_error(f"Cache clear error: {str(e)}", "Translation Cache Error")
+
+
+def clear_locale_cache(language_code):
+    """Clear compiled locale files for a specific language"""
+    try:
+        import glob
+
+        bench_path = get_bench_path()
+
+        # Clear from sites/assets/locale
+        locale_patterns = [
+            os.path.join(bench_path, "sites", "assets", "locale", language_code, "**", "*.mo"),
+            os.path.join(bench_path, "sites", "assets", "locale", language_code, "**", "*.po"),
+        ]
+
+        for pattern in locale_patterns:
+            for file_path in glob.glob(pattern, recursive=True):
+                try:
+                    os.remove(file_path)
+                except Exception:
+                    pass
+
+        # Remove the language directory if empty
+        locale_lang_dir = os.path.join(bench_path, "sites", "assets", "locale", language_code)
+        if os.path.exists(locale_lang_dir):
+            try:
+                shutil.rmtree(locale_lang_dir)
+            except Exception:
+                pass
+
+    except Exception as e:
+        frappe.log_error(f"Locale cache clear error: {str(e)}", "Translation Locale Error")
 
 
 @frappe.whitelist()
