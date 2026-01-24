@@ -287,7 +287,7 @@ def cleanup_old_backups(app_name, language_code, retention_count):
 
 
 def import_translations_to_db(app_name, language_code, file_path):
-    """Import translations from CSV file into the database"""
+    """Import translations from CSV file into the database using bulk operations"""
     try:
         # Read CSV directly without Frappe's validation
         translations = []
@@ -295,48 +295,66 @@ def import_translations_to_db(app_name, language_code, file_path):
             reader = csv.reader(f)
             for row in reader:
                 if len(row) >= 2:
-                    translations.append(row)
+                    source_text = row[0].strip() if row[0] else ""
+                    translated_text = row[1].strip() if row[1] else ""
+                    if source_text and translated_text:
+                        translations.append({
+                            "source": source_text,
+                            "translated": translated_text,
+                            "context": row[2].strip() if len(row) > 2 and row[2] else None
+                        })
 
         if not translations:
             return False
 
-        imported_count = 0
+        # Get all existing translations for this language in one query
+        existing = frappe.db.sql("""
+            SELECT name, source_text FROM tabTranslation WHERE language = %s
+        """, (language_code,), as_dict=True)
+
+        existing_map = {row.source_text: row.name for row in existing}
+
+        # Prepare bulk operations
+        to_update = []
+        to_insert = []
 
         for trans in translations:
-            source_text = trans[0].strip() if trans[0] else ""
-            translated_text = trans[1].strip() if len(trans) > 1 and trans[1] else ""
-            context = trans[2].strip() if len(trans) > 2 and trans[2] else None
-
-            # Skip empty source or translation
-            if not source_text or not translated_text:
-                continue
-
-            # Check if translation already exists
-            existing = frappe.db.get_value("Translation", {
-                "language": language_code,
-                "source_text": source_text
-            }, "name")
-
-            if existing:
-                frappe.db.set_value("Translation", existing, "translated_text", translated_text, update_modified=False)
+            if trans["source"] in existing_map:
+                to_update.append((trans["translated"], existing_map[trans["source"]]))
             else:
-                frappe.db.sql("""
-                    INSERT INTO `tabTranslation` (name, language, source_text, translated_text, context, creation, modified, owner, modified_by)
-                    VALUES (%s, %s, %s, %s, %s, NOW(), NOW(), %s, %s)
-                """, (
+                to_insert.append((
                     frappe.generate_hash(length=10),
                     language_code,
-                    source_text,
-                    translated_text,
-                    context,
+                    trans["source"],
+                    trans["translated"],
+                    trans["context"],
                     frappe.session.user,
                     frappe.session.user
                 ))
 
-            imported_count += 1
+        # Bulk update existing translations
+        if to_update:
+            # Update in batches of 500
+            for i in range(0, len(to_update), 500):
+                batch = to_update[i:i+500]
+                for translated_text, name in batch:
+                    frappe.db.sql("""
+                        UPDATE tabTranslation SET translated_text = %s, modified = NOW() WHERE name = %s
+                    """, (translated_text, name))
+
+        # Bulk insert new translations
+        if to_insert:
+            # Insert in batches of 500
+            for i in range(0, len(to_insert), 500):
+                batch = to_insert[i:i+500]
+                frappe.db.sql("""
+                    INSERT INTO `tabTranslation` (name, language, source_text, translated_text, context, creation, modified, owner, modified_by)
+                    VALUES {}
+                """.format(", ".join(["(%s, %s, %s, %s, %s, NOW(), NOW(), %s, %s)"] * len(batch))),
+                    [item for row in batch for item in row]
+                )
 
         frappe.db.commit()
-        frappe.log_error(f"Imported {imported_count} translations for {language_code}", "Translation Import Success")
         return True
 
     except Exception as e:

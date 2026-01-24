@@ -444,7 +444,8 @@ class TranslationEditor {
                     language_code: langCode,
                     translations: JSON.stringify(this.translations),
                     session_name: this.sessionName
-                }
+                },
+                timeout: 300 // 5 minutes timeout for large files
             });
 
             if (response.message && response.message.success) {
