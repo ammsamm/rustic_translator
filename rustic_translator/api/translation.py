@@ -286,52 +286,58 @@ def cleanup_old_backups(app_name, language_code, retention_count):
 def import_translations_to_db(app_name, language_code, file_path):
     """Import translations from CSV file into the database"""
     try:
-        from frappe.translate import read_csv_file
+        # Read CSV directly without Frappe's validation
+        translations = []
+        with open(file_path, "r", encoding="utf-8") as f:
+            reader = csv.reader(f)
+            for row in reader:
+                if len(row) >= 2:
+                    translations.append(row)
 
-        # Read translations from CSV
-        translations = read_csv_file(file_path)
+        if not translations:
+            return False
 
-        # Delete existing translations for this app/language
-        frappe.db.delete("Translation", {
-            "language": language_code,
-            "source_text": ("in", [t[0] for t in translations if t])
-        })
+        imported_count = 0
 
-        # Insert new translations
         for trans in translations:
-            if not trans or len(trans) < 2:
-                continue
+            source_text = trans[0].strip() if trans[0] else ""
+            translated_text = trans[1].strip() if len(trans) > 1 and trans[1] else ""
+            context = trans[2].strip() if len(trans) > 2 and trans[2] else None
 
-            source_text = trans[0]
-            translated_text = trans[1]
-            context = trans[2] if len(trans) > 2 else None
-
+            # Skip empty source or translation
             if not source_text or not translated_text:
                 continue
 
             # Check if translation already exists
-            existing = frappe.db.exists("Translation", {
+            existing = frappe.db.get_value("Translation", {
                 "language": language_code,
                 "source_text": source_text
-            })
+            }, "name")
 
             if existing:
-                frappe.db.set_value("Translation", existing, "translated_text", translated_text)
+                frappe.db.set_value("Translation", existing, "translated_text", translated_text, update_modified=False)
             else:
-                doc = frappe.get_doc({
-                    "doctype": "Translation",
-                    "language": language_code,
-                    "source_text": source_text,
-                    "translated_text": translated_text,
-                    "context": context
-                })
-                doc.insert(ignore_permissions=True)
+                frappe.db.sql("""
+                    INSERT INTO `tabTranslation` (name, language, source_text, translated_text, context, creation, modified, owner, modified_by)
+                    VALUES (%s, %s, %s, %s, %s, NOW(), NOW(), %s, %s)
+                """, (
+                    frappe.generate_hash(length=10),
+                    language_code,
+                    source_text,
+                    translated_text,
+                    context,
+                    frappe.session.user,
+                    frappe.session.user
+                ))
+
+            imported_count += 1
 
         frappe.db.commit()
+        frappe.log_error(f"Imported {imported_count} translations for {language_code}", "Translation Import Success")
         return True
 
     except Exception as e:
-        frappe.log_error(f"Translation import error: {str(e)}", "Translation Import Error")
+        frappe.log_error(f"Translation import error: {str(e)}\n{frappe.get_traceback()}", "Translation Import Error")
         return False
 
 
