@@ -292,6 +292,33 @@
     color: var(--text-color);
 }
 
+/* Action buttons */
+.te-edit-btn,
+.te-delete-btn {
+    padding: 2px 6px;
+    margin: 1px;
+}
+
+.te-edit-btn {
+    color: var(--text-muted);
+}
+
+.te-edit-btn:hover {
+    color: var(--primary);
+    background: var(--subtle-fg);
+}
+
+.te-delete-btn {
+    background: transparent;
+    border-color: var(--red-500);
+    color: var(--red-500);
+}
+
+.te-delete-btn:hover {
+    background: var(--red-500);
+    color: white;
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
     .te-controls .row {

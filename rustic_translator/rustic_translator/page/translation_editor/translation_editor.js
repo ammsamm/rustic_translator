@@ -284,10 +284,11 @@ class TranslationEditor {
             <table class="table table-bordered">
                 <thead>
                     <tr>
-                        <th style="width: 50px">#</th>
-                        <th style="width: 40%">${__('Source Text')}</th>
-                        <th style="width: 40%">${__('Translation')}</th>
+                        <th style="width: 40px">#</th>
+                        <th style="width: 35%">${__('Source Text')}</th>
+                        <th style="width: 35%">${__('Translation')}</th>
                         <th style="width: 10%">${__('Context')}</th>
+                        <th style="width: 80px">${__('Actions')}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -313,6 +314,14 @@ class TranslationEditor {
                     </td>
                     <td class="text-muted" style="font-size: 12px;">
                         ${frappe.utils.escape_html(trans.context || '-')}
+                    </td>
+                    <td class="text-center">
+                        <button class="btn btn-xs btn-default te-edit-btn" data-id="${trans.id}" title="${__('Edit Source')}">
+                            <i class="fa fa-pencil"></i>
+                        </button>
+                        <button class="btn btn-xs btn-danger te-delete-btn" data-id="${trans.id}" title="${__('Delete')}">
+                            <i class="fa fa-trash"></i>
+                        </button>
                     </td>
                 </tr>
             `;
@@ -345,6 +354,24 @@ class TranslationEditor {
                 else if (isEmpty) $row.addClass('te-row-empty');
 
                 this.updateStats();
+            }
+        });
+
+        // Edit source text button
+        $(this.wrapper).find('.te-edit-btn').on('click', (e) => {
+            const id = parseInt($(e.currentTarget).data('id'));
+            const trans = this.translations.find(t => t.id === id);
+            if (trans) {
+                this.showEditSourceDialog(trans);
+            }
+        });
+
+        // Delete button
+        $(this.wrapper).find('.te-delete-btn').on('click', (e) => {
+            const id = parseInt($(e.currentTarget).data('id'));
+            const trans = this.translations.find(t => t.id === id);
+            if (trans) {
+                this.confirmDeleteTranslation(trans);
             }
         });
 
@@ -799,5 +826,107 @@ class TranslationEditor {
                 `<span class="text-danger">${__('Detection failed')}</span>`
             );
         }
+    }
+
+    showEditSourceDialog(trans) {
+        const appName = $(this.wrapper).find('#te-app-select').val();
+        const langCode = $(this.wrapper).find('#te-lang-select').val();
+
+        const dialog = new frappe.ui.Dialog({
+            title: __('Edit Translation'),
+            fields: [
+                {
+                    fieldname: 'source_text',
+                    fieldtype: 'Small Text',
+                    label: __('Source Text (English)'),
+                    reqd: 1,
+                    default: trans.source_text
+                },
+                {
+                    fieldname: 'translated_text',
+                    fieldtype: 'Small Text',
+                    label: __('Translation'),
+                    reqd: 1,
+                    default: trans.translated_text || ''
+                },
+                {
+                    fieldname: 'context',
+                    fieldtype: 'Data',
+                    label: __('Context (Optional)'),
+                    default: trans.context || ''
+                }
+            ],
+            primary_action_label: __('Save'),
+            primary_action: async (values) => {
+                try {
+                    const response = await frappe.call({
+                        method: 'rustic_translator.api.translation.edit_source_text',
+                        args: {
+                            app_name: appName,
+                            language_code: langCode,
+                            old_source_text: trans.source_text,
+                            new_source_text: values.source_text,
+                            translated_text: values.translated_text,
+                            context: values.context || ''
+                        }
+                    });
+
+                    if (response.message && response.message.success) {
+                        dialog.hide();
+                        frappe.msgprint({
+                            title: __('Success'),
+                            indicator: 'green',
+                            message: __('Translation updated successfully!')
+                        });
+                        await this.loadTranslations();
+                    }
+                } catch (error) {
+                    frappe.msgprint({
+                        title: __('Error'),
+                        indicator: 'red',
+                        message: __('Failed to update translation')
+                    });
+                }
+            }
+        });
+
+        dialog.show();
+    }
+
+    confirmDeleteTranslation(trans) {
+        const appName = $(this.wrapper).find('#te-app-select').val();
+        const langCode = $(this.wrapper).find('#te-lang-select').val();
+
+        frappe.confirm(
+            __('Are you sure you want to delete this translation?') + '<br><br>' +
+            '<strong>' + __('Source') + ':</strong> ' + frappe.utils.escape_html(trans.source_text.substring(0, 100)) +
+            (trans.source_text.length > 100 ? '...' : ''),
+            async () => {
+                try {
+                    const response = await frappe.call({
+                        method: 'rustic_translator.api.translation.delete_translation',
+                        args: {
+                            app_name: appName,
+                            language_code: langCode,
+                            source_text: trans.source_text
+                        }
+                    });
+
+                    if (response.message && response.message.success) {
+                        frappe.show_alert({
+                            message: __('Translation deleted successfully!'),
+                            indicator: 'green'
+                        });
+                        await this.loadTranslations();
+                    }
+                } catch (error) {
+                    frappe.msgprint({
+                        title: __('Error'),
+                        indicator: 'red',
+                        message: __('Failed to delete translation')
+                    });
+                }
+            }
+        );
     }
 }
