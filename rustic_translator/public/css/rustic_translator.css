@@ -16,10 +16,11 @@
 }
 
 .te-controls {
-    background: var(--bg-light-gray, #f5f5f5);
+    background: var(--subtle-fg);
     padding: 15px;
-    border-radius: 4px;
+    border-radius: var(--border-radius);
     margin-bottom: 15px;
+    border: 1px solid var(--border-color);
 }
 
 .te-controls .row {
@@ -65,7 +66,7 @@
 }
 
 .te-grid th {
-    background: var(--bg-light-gray, #f5f5f5);
+    background: var(--subtle-fg);
     position: sticky;
     top: 0;
     z-index: 1;
@@ -192,12 +193,8 @@
 }
 
 /* Dark mode support */
-[data-theme="dark"] .te-controls {
-    background: var(--bg-dark-gray, #2c2c2c);
-}
-
 [data-theme="dark"] .te-grid th {
-    background: var(--bg-dark-gray, #2c2c2c);
+    background: var(--subtle-fg);
 }
 
 [data-theme="dark"] .te-source-text {

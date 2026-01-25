@@ -41,7 +41,7 @@ class TranslationEditor {
     renderControls() {
         this.page.main.html(`
             <div class="translation-editor">
-                <div class="te-controls frappe-card p-3 mb-3">
+                <div class="te-controls p-3 mb-3">
                     <div class="row">
                         <div class="col-md-3">
                             <label class="control-label">${__('App')}</label>
