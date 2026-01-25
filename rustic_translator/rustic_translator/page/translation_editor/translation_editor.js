@@ -297,7 +297,7 @@ class TranslationEditor {
             const rowNum = start + index + 1;
             const isModified = this.isModified(trans);
             const isEmpty = !trans.translated_text || trans.translated_text.trim() === '';
-            const rowClass = isModified ? 'table-warning' : (isEmpty ? 'table-danger' : '');
+            const rowClass = isModified ? 'te-row-modified' : (isEmpty ? 'te-row-empty' : '');
 
             html += `
                 <tr class="${rowClass}" data-id="${trans.id}">
@@ -340,9 +340,9 @@ class TranslationEditor {
                 const isModified = this.isModified(trans);
                 const isEmpty = !trans.translated_text || trans.translated_text.trim() === '';
 
-                $row.removeClass('table-warning table-danger');
-                if (isModified) $row.addClass('table-warning');
-                else if (isEmpty) $row.addClass('table-danger');
+                $row.removeClass('te-row-modified te-row-empty');
+                if (isModified) $row.addClass('te-row-modified');
+                else if (isEmpty) $row.addClass('te-row-empty');
 
                 this.updateStats();
             }

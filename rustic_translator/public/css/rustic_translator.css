@@ -128,11 +128,22 @@
 }
 
 .te-row-modified {
-    background-color: rgba(241, 196, 15, 0.1) !important;
+    background-color: rgba(59, 130, 246, 0.15) !important; /* Blue tint */
+    border-left: 3px solid #3b82f6 !important;
 }
 
 .te-row-empty {
-    background-color: rgba(231, 76, 60, 0.05) !important;
+    background-color: rgba(239, 68, 68, 0.1) !important; /* Red tint */
+    border-left: 3px solid #ef4444 !important;
+}
+
+/* Dark mode adjustments for row states */
+[data-theme="dark"] .te-row-modified {
+    background-color: rgba(59, 130, 246, 0.2) !important;
+}
+
+[data-theme="dark"] .te-row-empty {
+    background-color: rgba(239, 68, 68, 0.15) !important;
 }
 
 .te-context {
