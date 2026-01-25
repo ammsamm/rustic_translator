@@ -18,7 +18,7 @@
 }
 
 .te-controls {
-    background: var(--fg-color);
+    background: var(--card-bg);
     padding: 15px;
     border-radius: var(--border-radius-lg);
     margin-bottom: 15px;
@@ -70,7 +70,7 @@
     border-radius: var(--border-radius);
     max-height: calc(100vh - 350px);
     overflow-y: auto;
-    background: var(--fg-color);
+    background: var(--card-bg);
 }
 
 .te-grid {
@@ -189,7 +189,7 @@
 }
 
 .te-pagination .btn {
-    background: var(--fg-color);
+    background: var(--card-bg);
     border: 1px solid var(--border-color);
     color: var(--text-color);
 }
@@ -250,7 +250,7 @@
 
 /* Table styling */
 .translation-editor .table {
-    background: var(--fg-color);
+    background: var(--card-bg);
     color: var(--text-color);
     margin-bottom: 0;
 }
@@ -272,21 +272,29 @@
 }
 
 /* Form controls */
-.translation-editor .form-control {
-    background: var(--control-bg);
-    border: 1px solid var(--border-color);
-    color: var(--text-color);
+.translation-editor .form-control,
+.te-controls .form-control {
+    background: var(--control-bg) !important;
+    border: 1px solid var(--border-color) !important;
+    color: var(--text-color) !important;
     border-radius: var(--border-radius-sm);
 }
 
-.translation-editor .form-control:focus {
-    border-color: var(--primary);
+.translation-editor .form-control:focus,
+.te-controls .form-control:focus {
+    border-color: var(--primary) !important;
     box-shadow: 0 0 0 2px var(--primary-light);
-    background: var(--control-bg);
+    background: var(--control-bg) !important;
 }
 
-.translation-editor select.form-control {
-    background: var(--control-bg);
+.translation-editor select.form-control,
+.te-controls select.form-control {
+    background: var(--control-bg) !important;
+}
+
+.te-controls select option {
+    background: var(--card-bg);
+    color: var(--text-color);
 }
 
 /* Responsive adjustments */
