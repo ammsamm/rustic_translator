@@ -183,6 +183,10 @@ page_js = {"translation-editor": "public/js/translation_editor.js"}
 #	"Link Title": "get_link_title"
 # }
 
+# After Migrate
+# --------------------------------
+after_migrate = ["rustic_translator.setup_translations.after_migrate_sync_translations"]
+
 # Translation
 # --------------------------------
 

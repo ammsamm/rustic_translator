@@ -31,8 +31,8 @@ def get_available_apps():
     """Get list of apps that have translations directory (only frappe and erpnext)"""
     check_translation_manager_permission()
 
-    # Only allow translating frappe and erpnext core apps
-    allowed_apps = ["frappe", "erpnext"]
+    # Only allow translating these apps
+    allowed_apps = ["frappe", "erpnext", "rustic_translator"]
 
     apps_path = get_apps_path()
     available_apps = []
@@ -308,11 +308,32 @@ def import_translations_to_db(app_name, language_code, file_path):
             return False
 
         # Get all existing translations for this language in one query
+        # Order by modified DESC so the most recent entry comes first
         existing = frappe.db.sql("""
             SELECT name, source_text FROM tabTranslation WHERE language = %s
+            ORDER BY modified DESC
         """, (language_code,), as_dict=True)
 
-        existing_map = {row.source_text: row.name for row in existing}
+        # Build map keeping only the first (most recent) entry per source_text
+        # and collecting duplicate names for deletion
+        existing_map = {}
+        duplicates_to_delete = []
+        for row in existing:
+            if row.source_text in existing_map:
+                duplicates_to_delete.append(row.name)
+            else:
+                existing_map[row.source_text] = row.name
+
+        # Delete duplicates in batches
+        if duplicates_to_delete:
+            for i in range(0, len(duplicates_to_delete), 500):
+                batch = duplicates_to_delete[i:i+500]
+                frappe.db.sql(
+                    "DELETE FROM tabTranslation WHERE name IN ({})".format(
+                        ", ".join(["%s"] * len(batch))
+                    ),
+                    batch
+                )
 
         # Prepare bulk operations
         to_update = []
