@@ -32,7 +32,7 @@ def export():
 
     csv_path = os.path.join(
         os.path.dirname(__file__),
-        "rustic_translator", "translations", "ar.csv",
+        "translations", "ar.csv",
     )
 
     with open(csv_path, "w", encoding="utf-8", newline="") as f:
